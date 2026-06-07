@@ -632,6 +632,7 @@
   const scene   = document.getElementById('scene');
   let isListening = false;
   let recognition = null;
+  let processando = false;
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -641,7 +642,6 @@
     recognition.continuous = true;
     recognition.interimResults = true;
 
-let processando = false;
 
 recognition.onresult = async (e) => {
   const text = Array.from(e.results).map(r => r[0].transcript).join('');
@@ -716,7 +716,11 @@ async function enviarTexto() {
   if (!comando || processando) return;
 
   processando = true;
-  if (recognition && isListening) recognition.stop();
+
+  // para o microfone com segurança
+  try {
+    if (recognition && isListening) recognition.stop();
+  } catch(e) {}
 
   scene.classList.add('listening');
   status.textContent = '◈ PROCESSANDO COMANDO ◈';
@@ -732,26 +736,30 @@ async function enviarTexto() {
 
   setTimeout(() => {
     processando = false;
-    if (isListening && recognition) recognition.start();
+    try {
+      if (isListening && recognition) recognition.start();
+    } catch(e) {}
   }, 2000);
 }
 
 sendBtn.addEventListener('click', enviarTexto);
 
-// Enter para enviar
 textInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') enviarTexto();
 });
 
-// pausa o microfone quando digitar
 textInput.addEventListener('focus', () => {
-  if (isListening && recognition) recognition.stop();
+  try {
+    if (isListening && recognition) recognition.stop();
+  } catch(e) {}
 });
 
 textInput.addEventListener('blur', () => {
-  if (isListening && recognition) {
-    setTimeout(() => recognition.start(), 500);
-  }
+  setTimeout(() => {
+    try {
+      if (isListening && recognition) recognition.start();
+    } catch(e) {}
+  }, 500);
 });
   
 </script>
