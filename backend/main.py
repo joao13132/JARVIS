@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from integrations.comandos import executar_comando
 from integrations.email_sender import detectar_email
-from integrations.tts import falar
 from integrations.tts import falar, parar_fala
+from integrations.agenda import detectar_agenda
 from models.memoria import (
     salvar_mensagem,
     carregar_historico,
@@ -72,10 +72,18 @@ def processar_comando(body: Comando):
     if resultado:
         salvar_mensagem("user", body.command)
         salvar_mensagem("assistant", resultado)
-        falar(resultado)  # Jarvis fala pelo backend
+        falar(resultado)
         return {"response": resultado}
 
-    # 2. tenta comando de email
+    # 2. tenta comando de agenda
+    resultado_agenda = detectar_agenda(body.command, client)
+    if resultado_agenda:
+        salvar_mensagem("user", body.command)
+        salvar_mensagem("assistant", resultado_agenda)
+        falar(resultado_agenda)
+        return {"response": resultado_agenda}
+
+    # 3. tenta comando de email
     resultado_email = detectar_email(body.command, client, [])
     if resultado_email:
         salvar_mensagem("user", body.command)
@@ -83,7 +91,7 @@ def processar_comando(body: Comando):
         falar(resultado_email)
         return {"response": resultado_email}
 
-    # 3. manda para a IA com histórico do banco
+    # 4. manda para a IA com histórico do banco
     salvar_mensagem("user", body.command)
 
     historico = carregar_historico(20)
@@ -104,7 +112,7 @@ def processar_comando(body: Comando):
 
     texto = resposta.choices[0].message.content
     salvar_mensagem("assistant", texto)
-    falar(texto)  # Jarvis fala pelo backend
+    falar(texto)
 
     return {"response": texto}
 
