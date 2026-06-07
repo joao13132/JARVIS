@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
 from integrations.comandos import executar_comando
+from integrations.email_sender import detectar_email
 import os
 
 load_dotenv()
@@ -41,13 +42,17 @@ def status():
 
 @app.post("/api/command")
 def processar_comando(body: Comando):
-    # tenta executar comando do sistema primeiro
+    # 1. tenta comando do sistema
     resultado = executar_comando(body.command)
-
     if resultado:
         return {"response": resultado}
 
-    # se não for comando do sistema, manda para a IA
+    # 2. tenta comando de email
+    resultado_email = detectar_email(body.command, client, historico)
+    if resultado_email:
+        return {"response": resultado_email}
+
+    # 3. manda para a IA responder
     historico.append({
         "role": "user",
         "content": body.command

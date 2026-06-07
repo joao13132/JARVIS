@@ -431,6 +431,58 @@
     border-bottom-color: #fff;
     box-shadow: 0 0 60px rgba(0,212,255,0.4);
   }
+  /* Teclado de texto */
+#keyboard-bar {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 30;
+  width: 500px;
+}
+
+#text-input {
+  flex: 1;
+  background: rgba(0, 30, 50, 0.8);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 10px 16px;
+  outline: none;
+  border-radius: 4px;
+  transition: border .2s, box-shadow .2s;
+}
+
+#text-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.2);
+}
+
+#text-input::placeholder {
+  color: rgba(0, 212, 255, 0.25);
+}
+
+#send-btn {
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 10px 18px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .2s;
+}
+
+#send-btn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
+}
 </style>
 </head>
 <body>
@@ -525,7 +577,14 @@
 
 <!-- Transcript e Status -->
 <div id="transcript-display"></div>
-<div class="status-bar" id="statusBar">◈ AGUARDANDO COMANDO · DIGA "JARVIS" PARA ATIVAR ◈</div>
+
+<!-- Teclado / Input de texto -->
+<div id="keyboard-bar">
+  <input type="text" id="text-input" placeholder="Digite um comando..." autocomplete="off"/>
+  <button id="send-btn">ENVIAR</button>
+</div>
+
+<div class="status-bar" id="statusBar">◈ AGUARDANDO COMANDO ◈</div>
 <script src="js/jarvis.js"></script>
 <script>
   // ---- Cursor ----
@@ -588,8 +647,8 @@ recognition.onresult = async (e) => {
   const text = Array.from(e.results).map(r => r[0].transcript).join('');
   transcript.textContent = text.toUpperCase();
 
-  if (text.toLowerCase().includes('jarvis') && !processando) {
-    const comando = text.toLowerCase().replace('jarvis', '').trim();
+  if (!processando && text.trim().length > 2) {
+    const comando = text.toLowerCase().trim();
     if (!comando) return;
 
     processando = true; // bloqueia novas chamadas
@@ -648,6 +707,52 @@ recognition.onresult = async (e) => {
       transcript.textContent = '';
     }
   });
+  // ---- Teclado de texto ----
+const textInput = document.getElementById('text-input');
+const sendBtn   = document.getElementById('send-btn');
+
+async function enviarTexto() {
+  const comando = textInput.value.trim();
+  if (!comando || processando) return;
+
+  processando = true;
+  if (recognition && isListening) recognition.stop();
+
+  scene.classList.add('listening');
+  status.textContent = '◈ PROCESSANDO COMANDO ◈';
+  transcript.textContent = comando.toUpperCase();
+  textInput.value = '';
+
+  const resposta = await enviarComando(comando);
+
+  speak(resposta);
+  transcript.textContent = resposta.toUpperCase();
+  status.textContent = '◈ AGUARDANDO COMANDO ◈';
+  scene.classList.remove('listening');
+
+  setTimeout(() => {
+    processando = false;
+    if (isListening && recognition) recognition.start();
+  }, 2000);
+}
+
+sendBtn.addEventListener('click', enviarTexto);
+
+// Enter para enviar
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') enviarTexto();
+});
+
+// pausa o microfone quando digitar
+textInput.addEventListener('focus', () => {
+  if (isListening && recognition) recognition.stop();
+});
+
+textInput.addEventListener('blur', () => {
+  if (isListening && recognition) {
+    setTimeout(() => recognition.start(), 500);
+  }
+});
   
 </script>
 
