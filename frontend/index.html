@@ -677,34 +677,37 @@ recognition.onresult = async (e) => {
       status.textContent = '◈ ERRO DE MICROFONE · TENTE NOVAMENTE ◈';
     };
 
-    recognition.onend = () => {
-      if (isListening) recognition.start();
-    };
+   recognition.onend = () => {
+  if (isListening && !processando) {
+    try {
+      recognition.start();
+    } catch(e) {}
+  }
+};
   }
 
   function speak(text) {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'pt-BR';
-    u.rate = 0.95;
-    u.pitch = 0.85;
-    window.speechSynthesis.speak(u);
-  }
+    // voz desativada no browser - usando ElevenLabs no backend
+    console.log("Jarvis:", text);
+}
 
-  micBtn.addEventListener('click', () => {
+ micBtn.addEventListener('click', () => {
     if (!SpeechRecognition) {
       status.textContent = '◈ BROWSER NÃO SUPORTA VOZ ◈';
       return;
     }
-    isListening = !isListening;
-    micBtn.classList.toggle('active', isListening);
+
     if (isListening) {
-      recognition.start();
-      status.textContent = '◈ MICROFONE ATIVO · DIGA "JARVIS" ◈';
-      speak('Sistema de voz ativado.');
-    } else {
-      recognition.stop();
+      isListening = false;
+      micBtn.classList.remove('active');
+      try { recognition.stop(); } catch(e) {}
       status.textContent = '◈ MICROFONE DESLIGADO ◈';
       transcript.textContent = '';
+    } else {
+      isListening = true;
+      micBtn.classList.add('active');
+      try { recognition.start(); } catch(e) {}
+      status.textContent = '◈ MICROFONE ATIVO ◈';
     }
   });
   // ---- Teclado de texto ----

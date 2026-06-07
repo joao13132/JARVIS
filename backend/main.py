@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from integrations.comandos import executar_comando
 from integrations.email_sender import detectar_email
+from integrations.tts import falar
 from models.memoria import (
     salvar_mensagem,
     carregar_historico,
@@ -31,9 +32,8 @@ app.add_middleware(
 )
 
 SYSTEM_PROMPT = """Você é o J.A.R.V.I.S., assistente de inteligência artificial 
-do Tony Stark. Responda sempre em português brasileiro, de forma 
-eficiente, inteligente e levemente formal. Seja direto e útil.
-Você tem memória persistente e lembra de conversas anteriores."""
+do Tony Stark. Responda SEMPRE em português brasileiro, nunca em inglês.
+Seja eficiente, inteligente e levemente formal. Seja direto e útil."""
 
 class Comando(BaseModel):
     command: str
@@ -66,6 +66,7 @@ def processar_comando(body: Comando):
     if resultado:
         salvar_mensagem("user", body.command)
         salvar_mensagem("assistant", resultado)
+        falar(resultado)  # Jarvis fala pelo backend
         return {"response": resultado}
 
     # 2. tenta comando de email
@@ -73,6 +74,7 @@ def processar_comando(body: Comando):
     if resultado_email:
         salvar_mensagem("user", body.command)
         salvar_mensagem("assistant", resultado_email)
+        falar(resultado_email)
         return {"response": resultado_email}
 
     # 3. manda para a IA com histórico do banco
@@ -81,7 +83,6 @@ def processar_comando(body: Comando):
     historico = carregar_historico(20)
     memorias = carregar_todas_memorias()
 
-    # adiciona memórias ao contexto
     contexto = SYSTEM_PROMPT
     if memorias:
         contexto += f"\n\nInformações que você lembra do usuário:\n"
@@ -97,6 +98,7 @@ def processar_comando(body: Comando):
 
     texto = resposta.choices[0].message.content
     salvar_mensagem("assistant", texto)
+    falar(texto)  # Jarvis fala pelo backend
 
     return {"response": texto}
 
