@@ -7,6 +7,7 @@ from openai import OpenAI
 from integrations.comandos import executar_comando
 from integrations.email_sender import detectar_email
 from integrations.tts import falar
+from integrations.tts import falar, parar_fala
 from models.memoria import (
     salvar_mensagem,
     carregar_historico,
@@ -53,6 +54,11 @@ def get_historico():
 @app.get("/api/memorias")
 def get_memorias():
     return {"memorias": carregar_todas_memorias()}
+
+@app.post("/api/parar")
+def parar():
+    parar_fala()
+    return {"status": "fala pausada"}
 
 @app.post("/api/memoria")
 def salvar_mem(body: MemoriaInput):

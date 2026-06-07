@@ -483,6 +483,22 @@
   background: rgba(0, 212, 255, 0.2);
   box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
 }
+#stop-btn {
+  background: rgba(255, 50, 50, 0.08);
+  border: 1px solid rgba(255, 50, 50, 0.4);
+  color: rgba(255, 80, 80, 0.8);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .2s;
+}
+
+#stop-btn:hover {
+  background: rgba(255, 50, 50, 0.2);
+  box-shadow: 0 0 16px rgba(255, 50, 50, 0.3);
+}
 </style>
 </head>
 <body>
@@ -582,6 +598,7 @@
 <div id="keyboard-bar">
   <input type="text" id="text-input" placeholder="Digite um comando..." autocomplete="off"/>
   <button id="send-btn">ENVIAR</button>
+  <button id="stop-btn" title="Parar fala">■</button>
 </div>
 
 <div class="status-bar" id="statusBar">◈ AGUARDANDO COMANDO ◈</div>
@@ -764,7 +781,16 @@ textInput.addEventListener('blur', () => {
     } catch(e) {}
   }, 500);
 });
-  
+  // ---- Botão parar fala ----
+const stopBtn = document.getElementById('stop-btn');
+
+stopBtn.addEventListener('click', async () => {
+    await fetch('/api/parar', { method: 'POST' });
+    status.textContent = '◈ FALA INTERROMPIDA ◈';
+    setTimeout(() => {
+        status.textContent = '◈ AGUARDANDO COMANDO ◈';
+    }, 2000);
+});
 </script>
 
 </body>
