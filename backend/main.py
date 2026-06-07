@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
+from integrations.comandos import executar_comando
 import os
 
 load_dotenv()
@@ -40,6 +41,13 @@ def status():
 
 @app.post("/api/command")
 def processar_comando(body: Comando):
+    # tenta executar comando do sistema primeiro
+    resultado = executar_comando(body.command)
+
+    if resultado:
+        return {"response": resultado}
+
+    # se não for comando do sistema, manda para a IA
     historico.append({
         "role": "user",
         "content": body.command
