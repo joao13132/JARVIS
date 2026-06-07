@@ -8,6 +8,7 @@ from integrations.comandos import executar_comando
 from integrations.email_sender import detectar_email
 from integrations.tts import falar, parar_fala
 from integrations.agenda import detectar_agenda
+from integrations.whatsapp import detectar_whatsapp
 from models.memoria import (
     salvar_mensagem,
     carregar_historico,
@@ -91,7 +92,15 @@ def processar_comando(body: Comando):
         falar(resultado_email)
         return {"response": resultado_email}
 
-    # 4. manda para a IA com histórico do banco
+    # 4. tenta comando de WhatsApp
+    resultado_whatsapp = detectar_whatsapp(body.command, client)
+    if resultado_whatsapp:
+        salvar_mensagem("user", body.command)
+        salvar_mensagem("assistant", resultado_whatsapp)
+        falar(resultado_whatsapp)
+        return {"response": resultado_whatsapp}
+
+    # 5. manda para a IA com histórico do banco
     salvar_mensagem("user", body.command)
 
     historico = carregar_historico(20)

@@ -2,6 +2,7 @@
 
 import smtplib
 import os
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
@@ -30,15 +31,19 @@ def enviar_email(destinatario: str, assunto: str, mensagem: str) -> str:
 
 
 def detectar_email(texto: str, client, historico_ia: list) -> str | None:
-    texto = texto.lower()
+    texto_lower = texto.lower()
+
+    # ignora se for comando de WhatsApp
+    if any(p in texto_lower for p in ["whatsapp", "zap", "wpp"]):
+        return None
 
     # verifica se é comando de email
-    palavras_email = ["email", "e-mail", "mensagem", "enviar", "mandar", "escrever"]
-    if not any(p in texto for p in palavras_email):
+    palavras_email = ["email", "e-mail"]
+    if not any(p in texto_lower for p in palavras_email):
         return None
 
     # usa a IA para extrair destinatário, assunto e mensagem
-    prompt = f"""O usuário disse: "{texto}"
+    prompt = f"""O usuário disse: "{texto_lower}"
     
 Extraia as informações do email e responda APENAS em JSON assim:
 {{
@@ -55,10 +60,8 @@ Responda APENAS o JSON, sem texto adicional."""
         messages=[{"role": "user", "content": prompt}]
     )
 
-    import json
     try:
         texto_resposta = resposta.choices[0].message.content.strip()
-        # remove markdown se tiver
         texto_resposta = texto_resposta.replace("```json", "").replace("```", "").strip()
         dados = json.loads(texto_resposta)
 
@@ -78,4 +81,4 @@ Responda APENAS o JSON, sem texto adicional."""
         return enviar_email(destinatario, assunto, mensagem)
 
     except Exception as e:
-        return f"Não consegui entender os dados do email. Tente novamente dizendo: Jarvis, envie um email para fulano@gmail.com com assunto teste dizendo olá."
+        return f"Não consegui entender os dados do email. Tente: envie um email para fulano@gmail.com com assunto teste dizendo olá."
