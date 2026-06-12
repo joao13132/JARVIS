@@ -44,8 +44,8 @@ def parar_fala():
 
 def falar_browser(texto: str):
     global _processo_powershell
-    texto_escaped = texto.replace("'", "")
-    script = f"Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate = -2; $s.Speak('{texto_escaped}')"
+    texto_escaped = texto.replace("'", "").replace('"', '')
+    script = f"Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.SelectVoice('Microsoft Maria Desktop'); $s.Rate = -1; $s.Volume = 100; $s.Speak('{texto_escaped}')"
     try:
         _processo_powershell = subprocess.Popen(["powershell", "-Command", script])
     except Exception as e:
