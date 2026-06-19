@@ -16,6 +16,7 @@ from models.memoria import (
     carregar_todas_memorias
 )
 import os
+import requests
 
 load_dotenv()
 
@@ -55,6 +56,33 @@ def get_historico():
 @app.get("/api/memorias")
 def get_memorias():
     return {"memorias": carregar_todas_memorias()}
+
+@app.get("/api/clima")
+def get_clima():
+    try:
+        api_key = os.getenv("WEATHER_API_KEY")
+        if not api_key:
+            return {"erro": "Chave do clima não configurada"}
+
+        city = os.getenv("WEATHER_CITY", "São Paulo")
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=pt_br"
+        r = requests.get(url, timeout=5)
+        data = r.json()
+
+        if data.get("cod") != 200:
+            return {"erro": data.get("message", "erro desconhecido")}
+
+        return {
+            "cidade": data["name"],
+            "pais": data["sys"]["country"],
+            "temp": round(data["main"]["temp"]),
+            "sensacao": round(data["main"]["feels_like"]),
+            "umidade": data["main"]["humidity"],
+            "descricao": data["weather"][0]["description"].upper(),
+            "vento": round(data["wind"]["speed"] * 3.6)
+        }
+    except Exception as e:
+        return {"erro": str(e)}
 
 @app.post("/api/parar")
 def parar():

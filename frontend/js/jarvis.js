@@ -1,4 +1,4 @@
-// frontend/js/jarvis.js
+// js/jarvis.js — Comunicação com o backend
 
 const API_URL = '';
 
