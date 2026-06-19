@@ -1,10 +1,17 @@
 # backend/integrations/whatsapp.py
 
+# backend/integrations/whatsapp.py
+
 import webbrowser
 import urllib.parse
 import time
-import pyautogui
 from openai import OpenAI
+
+try:
+    import pyautogui
+    PYAUTOGUI_OK = True
+except Exception:
+    PYAUTOGUI_OK = False
 
 def detectar_whatsapp(texto: str, client_ia) -> str | None:
     texto_lower = texto.lower()
@@ -36,9 +43,13 @@ def enviar_whatsapp(numero: str, mensagem: str) -> str:
         url = f"https://web.whatsapp.com/send?phone={numero}&text={mensagem_encoded}"
         webbrowser.open(url)
 
-        # espera o WhatsApp Web carregar e envia
-        time.sleep(8)
-        pyautogui.press('enter')
+     # espera o WhatsApp Web carregar e envia (só funciona localmente)
+        if PYAUTOGUI_OK:
+            time.sleep(8)
+            pyautogui.press('enter')
+            return f"Mensagem enviada para {numero} no WhatsApp."
+        else:
+            return f"WhatsApp Web aberto para {numero}. Envie a mensagem manualmente (função automática só funciona localmente)."
 
         return f"Mensagem enviada para {numero} no WhatsApp."
 
