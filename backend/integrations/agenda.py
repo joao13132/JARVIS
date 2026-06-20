@@ -7,11 +7,15 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import os
 import pickle
+import json
+from .ia_client import gerar_resposta_json
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_PATH = os.path.join(os.path.dirname(BASE_DIR), 'credentials.json')
 TOKEN_PATH = os.path.join(os.path.dirname(BASE_DIR), 'token.pickle')
+
+
 def get_service():
     creds = None
 
@@ -35,22 +39,14 @@ def get_service():
 def criar_evento(titulo: str, data: str, hora: str, duracao: int = 60) -> str:
     try:
         service = get_service()
-
-        # monta data e hora
         dt_str = f"{data} {hora}"
         dt_inicio = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
         dt_fim = dt_inicio + timedelta(minutes=duracao)
 
         evento = {
             'summary': titulo,
-            'start': {
-                'dateTime': dt_inicio.isoformat(),
-                'timeZone': 'America/Sao_Paulo',
-            },
-            'end': {
-                'dateTime': dt_fim.isoformat(),
-                'timeZone': 'America/Sao_Paulo',
-            },
+            'start': {'dateTime': dt_inicio.isoformat(), 'timeZone': 'America/Sao_Paulo'},
+            'end': {'dateTime': dt_fim.isoformat(), 'timeZone': 'America/Sao_Paulo'},
         }
 
         service.events().insert(calendarId='primary', body=evento).execute()
@@ -63,31 +59,25 @@ def criar_evento(titulo: str, data: str, hora: str, duracao: int = 60) -> str:
 def listar_eventos(dias: int = 7) -> str:
     try:
         service = get_service()
-
         agora = datetime.utcnow().isoformat() + 'Z'
         limite = (datetime.utcnow() + timedelta(days=dias)).isoformat() + 'Z'
 
         resultado = service.events().list(
-            calendarId='primary',
-            timeMin=agora,
-            timeMax=limite,
-            maxResults=10,
-            singleEvents=True,
-            orderBy='startTime'
+            calendarId='primary', timeMin=agora, timeMax=limite,
+            maxResults=10, singleEvents=True, orderBy='startTime'
         ).execute()
 
         eventos = resultado.get('items', [])
-
         if not eventos:
             return f"Nenhum evento nos próximos {dias} dias."
 
-        resposta = f"Seus próximos eventos:\n"
+        resposta = "Seus próximos eventos:\n"
         for e in eventos:
             inicio = e['start'].get('dateTime', e['start'].get('date'))
             try:
                 dt = datetime.fromisoformat(inicio.replace('Z', '+00:00'))
                 inicio_fmt = dt.strftime("%d/%m às %H:%M")
-            except:
+            except Exception:
                 inicio_fmt = inicio
             resposta += f"- {e['summary']} em {inicio_fmt}\n"
 
@@ -100,34 +90,24 @@ def listar_eventos(dias: int = 7) -> str:
 def deletar_evento(titulo: str) -> str:
     try:
         service = get_service()
-
         agora = datetime.utcnow().isoformat() + 'Z'
         resultado = service.events().list(
-            calendarId='primary',
-            timeMin=agora,
-            maxResults=10,
-            singleEvents=True,
-            orderBy='startTime',
-            q=titulo
+            calendarId='primary', timeMin=agora, maxResults=10,
+            singleEvents=True, orderBy='startTime', q=titulo
         ).execute()
 
         eventos = resultado.get('items', [])
-
         if not eventos:
             return f"Nenhum evento encontrado com o nome '{titulo}'."
 
-        service.events().delete(
-            calendarId='primary',
-            eventId=eventos[0]['id']
-        ).execute()
-
+        service.events().delete(calendarId='primary', eventId=eventos[0]['id']).execute()
         return f"Evento '{eventos[0]['summary']}' deletado com sucesso."
 
     except Exception as e:
         return f"Erro ao deletar evento: {str(e)}"
 
 
-def detectar_agenda(texto: str, client_ia) -> str | None:
+def detectar_agenda(texto: str) -> str | None:
     palavras = ["agendar", "agenda", "evento", "compromisso", "reunião",
                 "marcar", "listar eventos", "próximos eventos", "cancelar evento",
                 "deletar evento", "remover evento"]
@@ -152,14 +132,8 @@ Se não tiver data, use a data de hoje: {datetime.now().strftime("%Y-%m-%d")}
 Se não tiver hora, use "09:00"
 Responda APENAS o JSON, sem texto adicional."""
 
-    resposta = client_ia.chat.completions.create(
-        model="openrouter/auto",
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    import json
     try:
-        texto_resp = resposta.choices[0].message.content.strip()
+        texto_resp = gerar_resposta_json(prompt).strip()
         texto_resp = texto_resp.replace("```json", "").replace("```", "").strip()
         dados = json.loads(texto_resp)
 
@@ -177,7 +151,7 @@ Responda APENAS o JSON, sem texto adicional."""
         elif acao == "deletar":
             return deletar_evento(dados.get("titulo", ""))
 
-    except Exception as e:
-        return f"Não entendi o comando de agenda. Tente: 'agendar reunião amanhã às 14h'"
+    except Exception:
+        return "Não entendi o comando de agenda. Tente: 'agendar reunião amanhã às 14h'"
 
     return None
